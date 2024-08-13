@@ -1,5 +1,8 @@
 '''Topology Optimzation Code for Electromagnetism
 
+**Inputs are given starting at line 320**
+Simply change inputs 
+
 Designs a 2D metalens with relative permittivity eps_r
 capable of monochromatic focusing of TE-polarized light
 at a point in space.
@@ -315,10 +318,13 @@ def topopt(targetXY,dVElmIdx,nElX,nElY,dVini,eps_r,wlen,fR,maxItr,**kwargs):
     return dVs, FOM
 
 if __name__ == '__main__':
-    DomainElementsX = 400
-    DomainElementsY = 200
-    DesignThicknessElements = 15
+    DomainElementsX = 400 # number of elements in x-axis
+    DomainElementsY = 200 # '' y-axis
+    DesignThicknessElements = 15 # height of design region in number of elements
     DDIdx = tile(np.arange(0, DomainElementsX * DomainElementsY, DomainElementsY), (DesignThicknessElements, 1)) + tile(
-        np.arange(165, 165 + DesignThicknessElements), (DomainElementsX, 1)).T
+        np.arange(165, 165 + DesignThicknessElements), (DomainElementsX, 1)).T # indices of design elements
 
     DVs,obj = topopt([200,80],DDIdx,DomainElementsX,DomainElementsY,0.5,3.0,35,6.0,200)
+    # Inputs are ([Focus x-position, y-position], Design indices, Num. Elements X, Num. Elements Y, 
+      #          Init value of design region dimensionless material constant, Relative permittivity of substrate,
+        #         Wavelength (in number of 10nm-wide mesh elements), Material projection threshold, Number of iterations)
