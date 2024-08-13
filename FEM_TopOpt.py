@@ -26,7 +26,7 @@ from scipy.sparse import csc_matrix
 from scipy.sparse.linalg import splu
 from scipy.optimize import minimize
 import matplotlib.pyplot as plt
-from matspy import spy  # function for viewing sparse matrix sparsity patterns
+#from matspy import spy  # function for viewing sparse matrix sparsity patterns
 
 ''' QUICK HELPER FUNCTION TO MIMIC arr(:) IN MATLAB '''
 def flat(arr):
