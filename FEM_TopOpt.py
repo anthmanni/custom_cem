@@ -16,7 +16,8 @@ The equation is solved in a rectangular domain, discretized using
 quadrilateral bi-linear finite elements.
 
 Started Jan 2024 from MATLAB to Python, original author Rasmus E. Christansen, April 2021
-Validated against MATLAB code on August 3, 2024.!'''
+J. Opt. Soc. Am. B 38, 1822-1823 (2021)
+Validated against MATLAB code on August 3, 2024!'''
 import numpy as np
 import scipy.sparse
 from scipy.signal import convolve2d as conv2
