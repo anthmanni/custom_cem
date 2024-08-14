@@ -1,7 +1,8 @@
 '''Topology Optimzation Code for Electromagnetism
 
 **Inputs are given starting at line 320**
-Simply change inputs 
+Simply change inputs such as domain size, focal point (x,y) position, 
+wavelength, and relative permittivity, and then run the file.
 
 Designs a 2D metalens with relative permittivity eps_r
 capable of monochromatic focusing of TE-polarized light
@@ -309,12 +310,15 @@ def topopt(targetXY,dVElmIdx,nElX,nElY,dVini,eps_r,wlen,fR,maxItr,**kwargs):
     filthr.beta = 1000
     print('Black/white design evaluation:')
     FOM_,_ = FOM(opt_dVs.x)
-
-    # plt.figure(1)
-    # plt.imshow(dis.dFPST.reshape((dis.nely, dis.nelx), order='F'))
-    # plt.figure(2)
-    # plt.imshow(np.reshape(np.abs(Ez) ** 2, (dis.nely + 1, dis.nelx + 1), order='F'))
-    # plt.show()
+    
+    fig, (ax1,ax2) = plt.subplots(1,2)
+    ax1.imshow(dis.dFPST.reshape((dis.nely, dis.nelx), order='F'))
+    ax1.set_title('Material Distribution')
+    ax2.imshow(np.reshape(np.abs(Ez)**2,(dis.nely + 1, dis.nelx + 1), order='F'))
+    ax2.set_title(f'|E$_z$|$^2$')
+    fig.suptitle(f'Final Design')
+    plt.tight_layout()
+    plt.show()
 
     return dVs, FOM
 
@@ -325,7 +329,7 @@ if __name__ == '__main__':
     DDIdx = tile(np.arange(0, DomainElementsX * DomainElementsY, DomainElementsY), (DesignThicknessElements, 1)) + tile(
         np.arange(165, 165 + DesignThicknessElements), (DomainElementsX, 1)).T # indices of design elements
 
-    DVs,obj = topopt([200,80],DDIdx,DomainElementsX,DomainElementsY,0.5,3.0,35,6.0,200)
+    DVs,obj = topopt([200,80],DDIdx,DomainElementsX,DomainElementsY,dVini=0.5,eps_r=3.0,wlen=35,fR=6.0,maxItr=200)
     # Inputs are ([Focus x-position, y-position], Design indices, Num. Elements X, Num. Elements Y, 
-      #          Init value of design region dimensionless material constant, Relative permittivity of substrate,
-        #         Wavelength (in number of 10nm-wide mesh elements), Material projection threshold, Number of iterations)
+      #          Initial value of design variables, Relative permittivity of substrate,
+        #         Wavelength (in number of 10nm-wide mesh elements), Material Interpolation filter radius, Number of iterations)
