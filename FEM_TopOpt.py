@@ -1,9 +1,5 @@
 '''Topology Optimzation Code for Electromagnetism
 
-**Inputs are given starting at line 320**
-Simply change inputs such as domain size, focal point (x,y) position, 
-wavelength, and relative permittivity, and then run the file.
-
 Designs a 2D metalens with relative permittivity eps_r
 capable of monochromatic focusing of TE-polarized light
 at a point in space.
@@ -17,8 +13,7 @@ The equation is solved in a rectangular domain, discretized using
 quadrilateral bi-linear finite elements.
 
 Started Jan 2024 from MATLAB to Python, original author Rasmus E. Christansen, April 2021
-J. Opt. Soc. Am. B 38, 1822-1823 (2021)
-Validated against MATLAB code on August 3, 2024!'''
+Validated against MATLAB code on August 3, 2024.!'''
 import numpy as np
 import scipy.sparse
 from scipy.signal import convolve2d as conv2
@@ -27,7 +22,7 @@ from scipy.sparse import csc_matrix
 from scipy.sparse.linalg import splu
 from scipy.optimize import minimize
 import matplotlib.pyplot as plt
-#from matspy import spy  # function for viewing sparse matrix sparsity patterns
+# from matspy import spy  # function for viewing sparse matrix sparsity patterns
 
 ''' QUICK HELPER FUNCTION TO MIMIC arr(:) IN MATLAB '''
 def flat(arr):
@@ -178,6 +173,7 @@ class filthresh:
 
 ''' SYSTEM SOLVING, OBJECTIVE FUNCTION AND GRADIENT EVALUATION '''
 def objective_grad(dVs,dis,phy,filThr):
+    global fig, ax1, ax2
     dFP = np.zeros((dis.nely,dis.nelx))
     dFP[np.arange(dis.nely-1, int(np.ceil(dis.nely * 9 / 10))-1, -1)] = 1
     dFP = dFP.flatten('F') # design field in physics, 0: air
@@ -187,7 +183,7 @@ def objective_grad(dVs,dis,phy,filThr):
     dFPS = density_filter(filThr.filKer, np.ones((dis.nely,dis.nelx)),
                           filThr.filSca,dFP,np.ones((dis.nely,dis.nelx)))
     dis.dFPST = threshold(dFPS,filThr.beta,filThr.eta)
-    A,dAdx = material_interpolation(phy.eps_r,dFPST,1.0) # MATERIAL FIELD
+    A,dAdx = material_interpolation(phy.eps_r,dis.dFPST,1.0) # MATERIAL FIELD
     dis.dFP = dFP.copy()
 
     ''' CONSTRUCT THE SYSTEM MATRIX '''
@@ -263,14 +259,13 @@ def objective_grad(dVs,dis,phy,filThr):
     FOM = -np.abs(FOM[0][0])
     sensFOM = -sensFOM # may need to .flatten() instead
     print('FOM Sensitivities = ',sensFOM,'\n','FOM = ',FOM)
-    plt.ion()
-    fig, (ax1,ax2) = plt.subplots(1,2)
-    fig.suptitle(f'FOM = {abs(FOM)}')
+    fig.suptitle(f'FOM = {abs(FOM):.1f}')
     ax1.imshow(dis.dFP.reshape((dis.nely, dis.nelx), order='F'))
     ax1.set_title('Material Distribution')
-    ax2.imshow(np.reshape(np.abs(Ez)**2,(dis.nely + 1, dis.nelx + 1), order='F'))
+    ax2.imshow(np.reshape(np.abs(dis.Ez)**2,(dis.nely + 1, dis.nelx + 1), order='F'))
     ax2.set_title(f'|E$_z$|$^2$')
-    plt.tight_layout()
+    fig.canvas.draw()
+    plt.pause(.02)
     # plt.savefig(f'{abs(FOM):0.3f}-FOM, metalens-35.png',bbox_inches='tight')
     return (FOM,list(sensFOM))
 
@@ -299,37 +294,37 @@ def topopt(targetXY,dVElmIdx,nElX,nElY,dVini,eps_r,wlen,fR,maxItr,**kwargs):
     # plt.imshow(dVs.reshape((dVElmIdx.shape[0],dVElmIdx.shape[1])))
     # plt.colorbar()
     # plt.show()
-
     '''SOLVE DESIGN PROBLEM USING SCIPY OPTIMIZER'''
     FOM = lambda design_variables: objective_grad(design_variables,dis,phy,filthr)
+    plt.ion()
+    global fig, ax1, ax2
+    fig, (ax1, ax2) = plt.subplots(1, 2)
+    plt.tight_layout()
     opt_dVs = minimize(FOM,dVs,jac=True,method='L-BFGS-B',
                        bounds = opt_bounds)
                        # ,maxiter=maxItr, maxfun=maxItr)
+    plt.ioff()
+    plt.show()
 
     '''FINALIZE BINARIZED DESIGN EVALUATION'''
     filthr.beta = 1000
     print('Black/white design evaluation:')
     FOM_,_ = FOM(opt_dVs.x)
-    
-    fig, (ax1,ax2) = plt.subplots(1,2)
-    ax1.imshow(dis.dFPST.reshape((dis.nely, dis.nelx), order='F'))
-    ax1.set_title('Material Distribution')
-    ax2.imshow(np.reshape(np.abs(Ez)**2,(dis.nely + 1, dis.nelx + 1), order='F'))
-    ax2.set_title(f'|E$_z$|$^2$')
-    fig.suptitle(f'Final Design')
-    plt.tight_layout()
-    plt.show()
+    #
+    # plt.figure(1)
+    # plt.imshow(dis.dFPST.reshape((dis.nely, dis.nelx), order='F'))
+    # plt.figure(2)
+    # plt.imshow(np.reshape(np.abs(dis.Ez) ** 2, (dis.nely + 1, dis.nelx + 1), order='F'))
+    # plt.show()
 
     return dVs, FOM
 
 if __name__ == '__main__':
-    DomainElementsX = 400 # number of elements in x-axis
-    DomainElementsY = 200 # '' y-axis
-    DesignThicknessElements = 15 # height of design region in number of elements
+    DomainElementsX = 400
+    DomainElementsY = 200
+    DesignThicknessElements = 15
     DDIdx = tile(np.arange(0, DomainElementsX * DomainElementsY, DomainElementsY), (DesignThicknessElements, 1)) + tile(
-        np.arange(165, 165 + DesignThicknessElements), (DomainElementsX, 1)).T # indices of design elements
-
-    DVs,obj = topopt([200,80],DDIdx,DomainElementsX,DomainElementsY,dVini=0.5,eps_r=3.0,wlen=35,fR=6.0,maxItr=200)
-    # Inputs are ([Focus x-position, y-position], Design indices, Num. Elements X, Num. Elements Y, 
-      #          Initial value of design variables, Relative permittivity of substrate,
-        #         Wavelength (in number of 10nm-wide mesh elements), Material Interpolation filter radius, Number of iterations)
+        np.arange(165, 165 + DesignThicknessElements), (DomainElementsX, 1)).T
+    DVs,obj = topopt([200,80],DDIdx,DomainElementsX,DomainElementsY,0.5,3.0,35,6.0,200)
+    plt.ioff()
+    plt.show()
